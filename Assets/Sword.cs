@@ -3,18 +3,17 @@ using System.Collections.Generic;
 using Fusion;
 using UnityEngine;
 
-public class Sword : NetworkBehaviour
+public class Sword : MonoBehaviour
 {
+    [SerializeField] ThirdPersonMovement owner;
     private void OnTriggerEnter(Collider other)
     {
         if(other.transform.TryGetComponent(out ThirdPersonMovement player))
         {
-            if(player != this)
+            if(player != owner)
             {
-                if (Object.HasStateAuthority)
-                {
-                    player.gameObject.GetComponent<ThirdPersonMovement>().GetDamage(20);
-                }
+                Debug.Log(player.gameObject.name);
+                owner.Attacked(player.Object.StateAuthority);
             }
         }
     }

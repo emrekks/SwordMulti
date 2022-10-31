@@ -10,7 +10,8 @@ using Cinemachine;
 
 public class ThirdPersonMovement : NetworkBehaviour
 {
-    [Networked]public int currentHealth{ get; set; }
+    [Networked(OnChanged = nameof(OnHealthChanged))]
+    public int CurrentHealth{ get; set; }
 
     public static ThirdPersonMovement Instance;
     
@@ -45,21 +46,27 @@ public class ThirdPersonMovement : NetworkBehaviour
     [Tooltip("Karakterin hareket hizi")] [SerializeField]private float speed = 6f;
     
     [Tooltip("Karakterin ziplama gucu")] [SerializeField]private float jumpForce = 6f;
-    
-    [Tooltip("Karakterin can degeri")] [SerializeField]private int health = 100;
-    
+
+    //[Tooltip("Karakterin can degeri")] [SerializeField]private int health = 100;
+    public const int health = 100;
+
     // [Tooltip("Karakterin guncel can degeri")] [SerializeField]private int currentHealth = 100;
 
-
+    [SerializeField] GameObject canvas;
 
     public override void Spawned()
     {
+        canvas.SetActive(false);
         if (!Object.HasStateAuthority)
         {
             return;
         }
 
+        canvas.SetActive(true);
         Instance = this;
+
+        Runner.SetPlayerObject(Object.StateAuthority, Object);
+
         
         _rb = GetComponent<Rigidbody>();
 
@@ -77,7 +84,7 @@ public class ThirdPersonMovement : NetworkBehaviour
         
         _playerInputSystem.Player.Inventory.performed += InventoryOnPerformed;
 
-        currentHealth = health;
+        CurrentHealth = health;
          
         Cursor.visible = inventoryOpened;
 
@@ -97,7 +104,7 @@ public class ThirdPersonMovement : NetworkBehaviour
             _anim.SetTrigger("attack");
         }
         
-        else if (context.performed && !inventoryOpened && hotbarController.selectedItem.CompareTag("Potion") && currentHealth < 100 && _groundCheck)
+        else if (context.performed && !inventoryOpened && hotbarController.selectedItem.CompareTag("Potion") && CurrentHealth < 100 && _groundCheck)
         {
             _anim.SetTrigger("potion");
 
@@ -168,24 +175,46 @@ public class ThirdPersonMovement : NetworkBehaviour
     
     public void Healing(int amounth) // oyuncunun canini arttirir
     {
-        currentHealth += amounth;
+        CurrentHealth += amounth;
            
-        if (currentHealth > 100)
+        if (CurrentHealth > 100)
         {
-            currentHealth = 100;
+            CurrentHealth = 100;
         }
         
-        healthBar.fillAmount = (float)currentHealth / health;
+        healthBar.fillAmount = (float)CurrentHealth / health;
     }
-    
-    
-    public void GetDamage(int getDmg) // oyuncunun canini azaltir
+
+    public void Attacked(PlayerRef player)
     {
-        Debug.Log(gameObject.name);
-        if (currentHealth > 0)
-        {
-            currentHealth -= getDmg;
-            healthBar.fillAmount = (float)currentHealth / health;
-        }
+        Rpc_Attacked(player);
+    }
+
+    [Rpc]
+    public void Rpc_Attacked([RpcTarget] PlayerRef player)
+    {
+        Instance.CurrentHealth -= 20;
+    }
+
+    //public void GetDamage(PlayerRef plyr, int damage)
+    //{
+    //    Rpc_GetDamage(plyr, damage);
+    //}
+    //[Rpc]
+    //public void Rpc_GetDamage([RpcTarget] PlayerRef plyr, int getDmg) // oyuncunun canini azaltir
+    //{
+    //    Instance.GetDamagedTaked(getDmg);
+    //}
+
+
+    public static void OnHealthChanged(Changed<ThirdPersonMovement> changed)
+    {
+        changed.LoadNew();
+        changed.Behaviour.HealthChanged();
+    }
+
+    public void HealthChanged()
+    {
+        healthBar.fillAmount = (float)CurrentHealth / health;
     }
 }
